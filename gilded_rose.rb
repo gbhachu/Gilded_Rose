@@ -1,121 +1,76 @@
+require './item'
+
 class GildedRose
+
+  LOWER_LIMIT          = 0
+  UPPER_LIMIT          = 50
+  TICKET_THRESHOLD_ONE = 11
+  TICKET_THRESHOLD_TWO = 6
 
   def initialize(items)
     @items = items
   end
 
-  def update_quality()
+  def update_quality
     @items.each do |item|
-      if item.name != "Aged Brie" and item.name != "Backstage passes to a TAFKAL80ETC concert"
-        if item.quality > 0
-          if item.name != "Sulfuras, Hand of Ragnaros"
-            # item.quality = item.quality - 1
-            item.decrease_quality
-          end
-        end
-      else
-        if item.quality < 50
-          item.quality = item.quality + 1
-          if item.name == "Backstage passes to a TAFKAL80ETC concert"
-            if item.sell_in < 11
-              item.increase_quality
-            end
-            if item.sell_in < 6
-              item.increase_quality
-            end
-          end
-        end
+      change_sell_in(item, -1) unless is_sulfuras?(item)
+      change_quality(item, -1) unless is_special?(item)
+
+      if is_special?(item)
+        change_quality(item, -2) if is_conjured?(item)
+        change_quality(item,  1) if is_aged_brie?(item) || is_backstage_pass?(item) || is_sulfuras?(item)
+        change_quality(item,  1) if is_backstage_pass?(item) && item.sell_in < TICKET_THRESHOLD_ONE
+        change_quality(item,  1) if is_backstage_pass?(item) && item.sell_in < TICKET_THRESHOLD_TWO
       end
-      if item.name != "Sulfuras, Hand of Ragnaros"
-        item.sell_in = item.sell_in - 1
+
+      if sell_in_passed?(item)
+        change_quality(item, -1) unless is_special?(item)
+        change_quality(item, -2) if is_conjured?(item)
+        change_quality(item,  1) if is_aged_brie?(item)
+        item.quality = LOWER_LIMIT if is_backstage_pass?(item)
       end
-      if item.sell_in < 0
-        if item.name != "Aged Brie"
-          if item.name != "Backstage passes to a TAFKAL80ETC concert"
-            if item.quality > 0
-              if item.name != "Sulfuras, Hand of Ragnaros"
-                # item.quality = item.quality - 1
-                item.decrease_quality
-              end
-            end
-          else
-            # item.quality = item.quality - item.quality
-            item.decrease_quality
-          end
-        else
-          item.increase_quality
-        end
-      end
+
     end
   end
-end
 
-class Item
-  attr_accessor :name, :sell_in, :quality
+  private
 
-  def initialize(name, sell_in, quality)
-    @name = name
-    @sell_in = sell_in
-    @quality = quality
+  def is_special?(item)
+    is_aged_brie?(item) || is_backstage_pass?(item) || is_sulfuras?(item) || is_conjured?(item)
   end
 
-  def to_s()
-    "#{@name}, #{@sell_in}, #{@quality}"
-  end
-end
-
-class Other < Item
-  def initialize(name, sell_in, quality)
-    super(name, sell_in, quality)
+  def is_aged_brie?(item)
+    item.name == "Aged Brie"
   end
 
-  def increase_quality(amount=1)
-    self.quality += amount if self.quality < 50
+  def is_sulfuras?(item)
+    item.name == "Sulfuras, Hand of Ragnaros"
   end
 
-  def decrease_quality(amount=1)
-    self.quality -= amount
-  end
-end
-
-class Sulfuras < Item
-  def initialize(name, sell_in, quality)
-    super(name, sell_in, quality)
+  def is_backstage_pass?(item)
+    item.name == "Backstage passes to a TAFKAL80ETC concert"
   end
 
-  def increase_quality(amount=1)
-    self.quality += amount if self.quality < 50
+  def is_conjured?(item)
+    item.name == "Conjured Mana Cake"
   end
 
-  def decrease_quality(amount=1)
-    self.quality -= amount
-  end
-end
-
-class AgedBrie < Item
-  def initialize(name, sell_in, quality)
-    super(name, sell_in, quality)
+  def change_quality(item, value)
+    if quality_within_range?(item) || is_aged_brie?(item)
+      item.quality += value
+    end
   end
 
-  def increase_quality(amount=1)
-    self.quality += amount if self.quality < 50
+  def quality_within_range?(item)
+    item.quality > LOWER_LIMIT && item.quality < UPPER_LIMIT
   end
 
-  def decrease_quality(amount=1)
-    self.quality -= amount
-  end
-end
-
-class Backstage < Item
-  def initialize(name, sell_in, quality)
-    super(name, sell_in, quality)
+  def change_sell_in(item, value)
+    item.sell_in += value
   end
 
-  def increase_quality(amount=1)
-    self.quality += amount if self.quality < 50
+  def sell_in_passed?(item)
+    item.sell_in < LOWER_LIMIT
   end
 
-  def decrease_quality(amount=1)
-    self.quality -= amount
-  end
 end
